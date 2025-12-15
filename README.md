@@ -1,20 +1,74 @@
-# Corteva Weather Assignment – Snowflake + dbt + Flask + Docker
+# Corteva Weather Data Engineering Project  
+**Tech Stack:** Snowflake • DBT • Python (Flask) • Docker • Medallion Architecture (Bronze → Silver → Gold)
 
-This project demonstrates an end-to-end data pipeline and API for a weather dataset using:
+---
 
-- Snowflake (Bronze/Silver/Gold layers)
-- dbt for transformations
-- Python (Flask) for REST API
-- Docker / docker-compose for local orchestration
+## 📌 Project Overview
 
-## 1. Prerequisites
+This project implements a complete end-to-end data engineering pipeline for ingesting, transforming, and serving weather data through a REST API.
 
-- Python 3.10+
-- Docker & docker-compose
-- A Snowflake account (with a warehouse and role)
-- Access to the provided `wx_data` files (daily weather measurements)
+It follows a **Medallion Architecture** using:
 
-## 2. Snowflake Setup
+- **Bronze** → Raw ingestion into Snowflake  
+- **Silver** → Cleaned, standardized, deduplicated data using dbt  
+- **Gold** → Yearly aggregated curated tables  
+- **Flask REST API** → Exposes both raw & aggregated data  
+- **Docker** → Ensures consistent and reproducible execution  
+
+The goal is to simulate a production-grade data pipeline.
+
+---
+
+## 🏗 Architecture Diagram (Conceptual)
+
+wx_data/*.txt → Ingestion Job (Python) → Snowflake RAW (Bronze)
+↓
+dbt Models
+↓
+RAW → SILVER (clean/unit convert/dedup) → GOLD (yearly aggregates)
+↓
+Flask REST API
+
+
+---
+
+## ✨ Features
+
+### ✅ Ingestion Layer (Python → Snowflake)
+- Reads raw weather `.txt` files
+- Converts -9999 to NULL
+- Parses dates & numeric fields
+- Loads into `RAW.WEATHER_DAILY_RAW` using **MERGE → idempotent**
+- Logs record counts and timestamps
+
+---
+
+### ✅ Transformations (dbt)
+**Silver Layer**
+- Deduplicates rows using window functions  
+- Standardizes units (tenths → Celsius/mm)  
+- Produces `stg_weather_daily` view  
+
+**Gold Layer**
+- Aggregates by station & year  
+- Computes  
+  - Average max temp  
+  - Average min temp  
+  - Total precipitation (converted to cm)  
+- Materializes as `WEATHER_YEARLY_STATS` table  
+
+---
+
+### ✅ REST API (Flask)
+Two endpoints:
+
+| Endpoint | Description |
+|---------|-------------|
+| `/api/weather` | Raw daily weather data |
+| `/api/weather/stats` | Yearly aggregated metrics |
+
+
+## Snowflake Setup
 
 Run the SQL scripts in `sql/` in order:
 
@@ -33,7 +87,7 @@ Tables created:
 - `WEATHER_DB.RAW.WEATHER_DAILY_RAW`    (Bronze)
 - `WEATHER_DB.ANALYTICS.WEATHER_YEARLY_STATS` (Gold – dbt materialization)
 
-## 3. Environment Variables
+## Environment Variables
 
 Copy `.env.example` to `.env` and fill in Snowflake credentials:
 
@@ -43,12 +97,12 @@ cp .env.example .env
 
 `.env` variables are used by both the ingestion script and API containers.
 
-## 4. Ingestion – Bronze Layer
+## Ingestion – Bronze Layer
 
 The ingestion job reads the raw `wx_data/*.txt` files and loads them into
 `WEATHER_DB.RAW.WEATHER_DAILY_RAW` using MERGE (idempotent).
 
-### 4.1. Local run (no Docker)
+### Local run (no Docker)
 
 ```bash
 cd ingestion
@@ -64,7 +118,7 @@ export $(grep -v '^#' ../.env | xargs)
 
 Also ensure `WX_DATA_PATH` points to the directory where `*.txt` weather files live.
 
-### 4.2. Docker run
+### Docker run
 
 At project root:
 
@@ -75,7 +129,7 @@ docker-compose run --rm ingestion
 This builds the ingestion image and runs it once, mounting the local `wx_data` folder
 into the container at `/app/data/wx_data`.
 
-## 5. dbt – Bronze → Silver → Gold
+## dbt – Bronze → Silver → Gold
 
 Project is under `dbt_weather/`.
 
@@ -88,7 +142,7 @@ Models:
   - Aggregates to yearly per station and writes to
     `WEATHER_DB.ANALYTICS.WEATHER_YEARLY_STATS`
 
-### 5.1. Configure dbt profiles
+### Configure dbt profiles
 
 Copy `profiles.yml.example` to `~/.dbt/profiles.yml` (or adjust `DBT_PROFILES_DIR`):
 
@@ -99,7 +153,7 @@ cp dbt_weather/profiles.yml.example ~/.dbt/profiles.yml
 
 Ensure the environment variables (`SNOWFLAKE_*`) are set.
 
-### 5.2. Run dbt
+### Run dbt
 
 ```bash
 cd dbt_weather
@@ -113,7 +167,7 @@ After this, you should see data in:
 SELECT * FROM WEATHER_DB.ANALYTICS.WEATHER_YEARLY_STATS;
 ```
 
-## 6. Flask API – Serving the Data
+## Flask API – Serving the Data
 
 The API exposes two main endpoints:
 
@@ -122,7 +176,7 @@ The API exposes two main endpoints:
 
 Swagger UI is available at `/apidocs`.
 
-### 6.1. Local run (no Docker)
+### Local run (no Docker)
 
 ```bash
 cd api
@@ -133,7 +187,7 @@ python app.py
 
 Visit `http://localhost:5000/apidocs` in your browser.
 
-### 6.2. Docker / docker-compose
+### Docker / docker-compose
 
 From project root:
 
@@ -143,7 +197,7 @@ docker-compose up --build api
 
 API is available at `http://localhost:5000`.
 
-## 7. Medallion Architecture Mapping
+## Medallion Architecture Mapping
 
 - **Bronze**: `WEATHER_DB.RAW.WEATHER_DAILY_RAW`
 - **Silver**: `dbt_weather.models.staging.stg_weather_daily` (view)
@@ -152,7 +206,7 @@ API is available at `http://localhost:5000`.
 In a real production setup, additional Silver/Gold models can be added to support more
 use-cases (e.g., station-enriched facts, rolling windows, etc.).
 
-## 8. Notes
+## Notes
 
 - This project is intentionally kept small and focused to fit in an interview assignment.
 - For real workloads, you would likely:
