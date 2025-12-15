@@ -10,5 +10,5 @@ dbt_weather:
       database: WEATHER_DB
       warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
       schema: RAW
-      threads: 4
+      threads: 1
       client_session_keep_alive: False
