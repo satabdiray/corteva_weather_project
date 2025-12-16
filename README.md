@@ -3,7 +3,7 @@
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 This project implements a complete end-to-end data engineering pipeline for ingesting, transforming, and serving weather data through a REST API.
 
@@ -19,7 +19,7 @@ The goal is to simulate a production-grade data pipeline.
 
 ---
 
-## 🏗 Architecture Diagram (Conceptual)
+## Architecture Diagram (Conceptual)
 
 wx_data/*.txt → Ingestion Job (Python) → Snowflake RAW (Bronze)
 ↓
@@ -32,9 +32,9 @@ Flask REST API
 
 ---
 
-## ✨ Features
+## Features
 
-### ✅ Ingestion Layer (Python → Snowflake)
+### Ingestion Layer (Python → Snowflake)
 - Reads raw weather `.txt` files
 - Converts -9999 to NULL
 - Parses dates & numeric fields
@@ -43,7 +43,7 @@ Flask REST API
 
 ---
 
-### ✅ Transformations (dbt)
+### Transformations (dbt)
 **Silver Layer**
 - Deduplicates rows using window functions  
 - Standardizes units (tenths → Celsius/mm)  
@@ -59,7 +59,7 @@ Flask REST API
 
 ---
 
-### ✅ REST API (Flask)
+### REST API (Flask)
 Two endpoints:
 
 | Endpoint | Description |
